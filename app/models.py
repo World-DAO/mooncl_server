@@ -7,6 +7,7 @@ from sqlalchemy import (
     Text,
     ForeignKey,
     JSON,
+    DECIMAL,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -21,29 +22,29 @@ class OpinionDB(Base):
     __tablename__ = "opinions"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    content = Column(Text, nullable=False)
     address = Column(String(255), nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    is_minted = Column(Boolean, default=False)
+    evaluate_price = Column(DECIMAL(20, 8), default=0.00000000)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
-    likes = Column(Integer, default=0)
-    is_minted = Column(Boolean, default=False)
-    nft_id = Column(Integer, ForeignKey("nfts.id"), nullable=True)
 
     # 关系
-    nft = relationship("NFTDB", back_populates="opinion")
+    nft = relationship("NFTDB", back_populates="opinion", uselist=False)
 
 
 class NFTDB(Base):
-    __tablename__ = "nfts"
+    __tablename__ = "nft"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    opinion_id = Column(Integer, ForeignKey("opinions.id"), nullable=False, index=True)
     token_id = Column(String(255), unique=True, nullable=False, index=True)
-    opinion_id = Column(Integer, ForeignKey("opinions.id"), nullable=False)
-    owner = Column(String(255), nullable=False, index=True)
-    creator = Column(String(255), nullable=False)
+    owner_address = Column(String(255), nullable=False, index=True)
+    mint_price = Column(DECIMAL(20, 8), nullable=False)
+    current_price = Column(DECIMAL(20, 8), nullable=True)
+    is_for_sale = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
-    transaction_history = Column(JSON)  # MySQL支持JSON类型
-    metadata = Column(JSON)  # 存储NFT元数据
+    updated_at = Column(DateTime, onupdate=func.now())
 
     # 关系
     opinion = relationship("OpinionDB", back_populates="nft")
@@ -56,15 +57,21 @@ class OpinionCreate(BaseModel):
 
 class OpinionResponse(BaseModel):
     id: int
-    content: str
     address: str
-    created_at: datetime
-    likes: int
+    content: str
     is_minted: bool
-    nft_id: Optional[int] = None
+    evaluate_price: float
+    created_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
+
+class OpinionPriceResponse(BaseModel):
+    opinion_id: int
+    price: float
+    currency: str = "ETH"
 
 
 class MintNFTRequest(BaseModel):
@@ -93,13 +100,29 @@ class TransferNFTResponse(BaseModel):
     error: Optional[str] = None
 
 
+class NFTResponse(BaseModel):
+    id: int
+    opinion_id: int
+    token_id: str
+    owner_address: str
+    mint_price: float
+    current_price: Optional[float] = None
+    is_for_sale: bool
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
 class NFTListResponse(BaseModel):
     id: int
     token_id: str
-    owner: str
-    creator: str
+    owner_address: str
+    mint_price: float
+    current_price: Optional[float] = None
+    is_for_sale: bool
     created_at: datetime
-    opinion_title: str
     opinion_content: str
 
     class Config:
@@ -113,8 +136,25 @@ class PurchaseNFTRequest(BaseModel):
 class PurchaseNFTResponse(BaseModel):
     success: bool
     nft_id: Optional[int] = None
-    buyer_address: Optional[str] = None
-    seller_address: Optional[str] = None
-    sale_price: Optional[float] = None
+    buyer: Optional[str] = None
+    seller: Optional[str] = None
+    price: Optional[float] = None
+    currency: Optional[str] = None
     transaction_hash: Optional[str] = None
+    error: Optional[str] = None
+
+
+class MintEstimateResponse(BaseModel):
+    success: bool
+    opinion_id: Optional[int] = None
+    estimated_fee: Optional[float] = None
+    currency: Optional[str] = "ETH"
+    error: Optional[str] = None
+
+
+class PurchaseEstimateResponse(BaseModel):
+    success: bool
+    nft_id: Optional[int] = None
+    estimated_price: Optional[float] = None
+    currency: Optional[str] = "ETH"
     error: Optional[str] = None

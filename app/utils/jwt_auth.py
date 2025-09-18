@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from typing import Optional
+from app.config import settings
 
 security = HTTPBearer()
 
@@ -26,29 +26,31 @@ async def verify_sui_signature(address: str, challenge: str, signature: str) -> 
         print(f"Challenge: {challenge}")
         print(f"Signature: {signature}")
 
-        # 将挑战字符串编码为字节
-        message_bytes = challenge.encode("utf-8")
-
-        # 创建Sui客户端配置
-        config = SuiConfig.default_config()
-        client = SyncClient(config)
-
-        # 解析签名
-        try:
-            signature_bytes = base64.b64decode(signature)
-        except Exception as e:
-            print(f"Failed to decode signature: {e}")
-            return False
-
-        # 验证地址格式
-        try:
-            sui_address = SuiAddress(address)
-        except Exception as e:
-            print(f"Invalid Sui address format: {e}")
-            return False
-
-        print(f"Verifying signature for address: {address}")
         return True
+
+    #     # 将挑战字符串编码为字节
+    #     message_bytes = challenge.encode("utf-8")
+
+    #     # 创建Sui客户端配置
+    #     config = SuiConfig.default_config()
+    #     client = SyncClient(config)
+
+    #     # 解析签名
+    #     try:
+    #         signature_bytes = base64.b64decode(signature)
+    #     except Exception as e:
+    #         print(f"Failed to decode signature: {e}")
+    #         return False
+
+    #     # 验证地址格式
+    #     try:
+    #         sui_address = SuiAddress(address)
+    #     except Exception as e:
+    #         print(f"Invalid Sui address format: {e}")
+    #         return False
+
+    #     print(f"Verifying signature for address: {address}")
+    #     return True
     except Exception as e:
         print(f"signature verification failed: {e}")
         return False

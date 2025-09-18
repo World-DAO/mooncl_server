@@ -201,3 +201,4 @@ Dockerfile.prod
 fastapi.log
 uvicorn.log
 
+debate/

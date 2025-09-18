@@ -26,15 +26,22 @@ def create_opinion(
         )
 
 
-@router.get("/{opinion_id}", response_model=OpinionResponse)
-def get_opinion(opinion_id: int, db: Session = Depends(get_db)):
-    """获取观点详情"""
-    opinion = OpinionService.get_opinion(db, opinion_id)
-    if not opinion:
+@router.get("/ranking")
+def get_opinion_ranking(
+    sort_by: str = Query("price", description="排序方式"),
+    limit: int = Query(10, description="返回数量限制"),
+    offset: int = Query(0, description="偏移量"),
+    db: Session = Depends(get_db),
+):
+    """获取观点排行榜"""
+    try:
+        result = OpinionService.get_opinion_ranking(db, sort_by, limit, offset)
+        return result
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Opinion not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get opinion ranking: {str(e)}",
         )
-    return opinion
 
 
 @router.get("/user/{user_address}", response_model=List[OpinionResponse])
@@ -49,33 +56,25 @@ def get_user_opinions(user_address: str, db: Session = Depends(get_db)):
         )
 
 
-@router.get("/ranking")
-def get_opinion_ranking(
-    sort_by: str = Query("hot", description="排序方式: hot, likes, comments, latest"),
-    limit: int = Query(10, description="返回数量限制"),
-    offset: int = Query(0, description="偏移量"),
-    db: Session = Depends(get_db)
-):
-    """获取观点排行榜"""
-    try:
-        result = OpinionService.get_opinion_ranking(db, sort_by, limit, offset)
-        return result
-    except Exception as e:
+@router.get("/detail/{opinion_id}", response_model=OpinionResponse)
+def get_opinion(opinion_id: int, db: Session = Depends(get_db)):
+    """获取观点详情"""
+    opinion = OpinionService.get_opinion(db, opinion_id)
+    if not opinion:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get opinion ranking: {str(e)}",
+            status_code=status.HTTP_404_NOT_FOUND, detail="Opinion not found"
         )
+    return opinion
 
 
-@router.get("/{opinion_id}/price")
+@router.get("/detail/{opinion_id}/price")
 def get_opinion_price(opinion_id: int, db: Session = Depends(get_db)):
     """获取观点价格"""
     try:
-        price_info = OpinionService.get_opinion_price(db, opinion_id)
+        price_info = OpinionService.evaluate_opinion_price(db, opinion_id)
         if not price_info:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Opinion not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Opinion not found"
             )
         return price_info
     except HTTPException:
