@@ -4,12 +4,12 @@
 
 - **服务名称**: MoonCL Server API
 - **版本**: 1.0.0
-- **基础URL**: `http://43.156.89.66:8000`
+- **基础URL**: `https://distributor-professionals-same-speakers.trycloudflare.com`
 - **协议**: HTTP/HTTPS
 
 ## 认证方式
 
-基于Sui签名的JWT认证机制。需要认证的接口需要在请求头中包含：
+基于签名的JWT认证机制。需要认证的接口需要在请求头中包含：
 
 ```
 Authorization: Bearer <JWT_TOKEN>
@@ -97,8 +97,7 @@ Authorization: Bearer <JWT_TOKEN>
 **请求参数**:
 ```json
 {
-  "title": "string",
-  "content": "string"  
+  "content": "string"
 }
 ```
 
@@ -106,13 +105,12 @@ Authorization: Bearer <JWT_TOKEN>
 ```json
 {
   "id": 1,
-  "title": "string",
-  "content": "string",
   "address": "string",
-  "created_at": "string",
-  "likes": 0,
+  "content": "string",
   "is_minted": false,
-  "nft_id": null
+  "evaluate_price": 0.01,
+  "created_at": "string",
+  "updated_at": null
 }
 ```
 
@@ -125,7 +123,7 @@ Authorization: Bearer <JWT_TOKEN>
 
 ### 2.2 获取观点详情
 
-**接口**: `GET /api/v1/opinions/{opinion_id}`
+**接口**: `GET /api/v1/opinions/detail/{opinion_id}`
 
 **描述**: 根据ID获取观点详细信息
 
@@ -136,13 +134,12 @@ Authorization: Bearer <JWT_TOKEN>
 ```json
 {
   "id": 1,
-  "title": "string",
-  "content": "string",
   "address": "string",
-  "created_at": "string",
-  "likes": 0,
+  "content": "string",
   "is_minted": false,
-  "nft_id": null
+  "evaluate_price": 0.01,
+  "created_at": "string",
+  "updated_at": null
 }
 ```
 
@@ -151,6 +148,7 @@ Authorization: Bearer <JWT_TOKEN>
 - `404`: 观点不存在
 
 ---
+
 
 ### 2.3 获取用户观点列表
 
@@ -190,32 +188,25 @@ Authorization: Bearer <JWT_TOKEN>
 **描述**: 获取观点排行榜，支持多种排序方式
 
 **查询参数**:
-- `sort_by` (string, 可选): 排序方式
+- `sort_by` (string, 可选): 排序方式，默认"price"
   - `price` - 按价格排序
-  - `likes` - 按点赞数排序
   - `recent` - 按创建时间排序
-- `limit` (integer, 可选): 返回数量限制，默认20，最大100
+- `limit` (integer, 可选): 返回数量限制，默认10，最大100
 - `offset` (integer, 可选): 偏移量，用于分页，默认0
 
 **响应**:
 ```json
-{
-  "opinions": [
-    {
-      "id": 1,
-      "title": "string",
-      "content": "string",
-      "address": "string",
-      "created_at": "string",
-      "likes": 150,
-      "is_minted": true,
-      "nft_id": 1,
-      "price": 0.5
-    }
-  ],
-  "total": 1000,
-  "sort_by": "price"
-}
+[
+  {
+    "id": 1,
+    "address": "string",
+    "content": "string",
+    "is_minted": true,
+    "evaluate_price": 0.5,
+    "created_at": "string",
+    "updated_at": null
+  }
+]
 ```
 
 **状态码**:
@@ -227,7 +218,7 @@ Authorization: Bearer <JWT_TOKEN>
 
 ### 2.5 获取观点价格
 
-**接口**: `GET /api/v1/opinions/{opinion_id}/price`
+**接口**: `GET /api/v1/opinions/detail/{opinion_id}/price`
 
 **描述**: 获取指定观点的当前价格信息
 
@@ -238,9 +229,7 @@ Authorization: Bearer <JWT_TOKEN>
 ```json
 {
   "opinion_id": 1,
-  "price": 0.5,  
-  "nft_id": 1,    
-  "is_minted": true        
+  "price": 0.01,
 }
 ```
 
@@ -250,6 +239,7 @@ Authorization: Bearer <JWT_TOKEN>
 - `500`: 服务器内部错误
 
 ---
+
 
 ## 3. NFT模块 (6个接口)
 - `POST /api/v1/nfts/mint` - 铸造NFT
@@ -305,8 +295,10 @@ Authorization: Bearer <JWT_TOKEN>
 **响应**:
 ```json
 {
+  "success": true,
   "opinion_id": 1,
-  "estimated_gas_fee": 0.001, // 预估Gas费用（SUI）
+  "estimated_fee": 0.001,
+  "error": null
 }
 ```
 
@@ -324,16 +316,16 @@ Authorization: Bearer <JWT_TOKEN>
 **描述**: 获取购买NFT的费用估价（包含交易费用）
 
 **查询参数**:
-- `nft_id`: NFT ID
+- `nft_id` (integer): NFT ID
 
 **响应**:
 ```json
 {
+  "success": true,
   "nft_id": 1,
-  "price": 0.5,     
-  "gas_fee": 0.001,          // Gas费用
-  "total_cost": 0.526,       // 总费用
-  
+  "estimated_price": 0.5,
+  "currency": "ETH",
+  "error": null
 }
 ```
 
@@ -364,9 +356,10 @@ Authorization: Bearer <JWT_TOKEN>
 {
   "success": true,
   "nft_id": 1,
-  "buyer_address": "string",
-  "seller_address": "string",
+  "buyer": "string",
+  "seller": "string",
   "price": 0.5,
+  "currency": "ETH",
   "transaction_hash": "string",
   "error": null
 }
@@ -392,7 +385,8 @@ Authorization: Bearer <JWT_TOKEN>
 **请求参数**:
 ```json
 {
-  "nft_id": 1
+  "nft_id": 1,
+  "to_address": "string"
 }
 ```
 
@@ -431,9 +425,12 @@ Authorization: Bearer <JWT_TOKEN>
   {
     "id": 1,
     "token_id": "string",
-    "creator": "string",
+    "owner_address": "string",
+    "mint_price": 0.01,
+    "current_price": 0.5,
+    "is_for_sale": true,
     "created_at": "string",
-    "opinion_id": 1
+    "opinion_content": "string"
   }
 ]
 ```

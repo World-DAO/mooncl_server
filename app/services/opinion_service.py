@@ -17,6 +17,7 @@ class OpinionService:
         }
 
         db_opinion = OpinionDAO.create(db, opinion_data)
+        evaluate_opinion_price(db, db_opinion.id)
 
         return OpinionResponse(
             id=db_opinion.id,
@@ -64,7 +65,7 @@ class OpinionService:
 
     @staticmethod
     def get_opinion_ranking(
-        db: Session, sort_by: str = "latest", limit: int = 10, offset: int = 0
+        db: Session, sort_by: str = "price", limit: int = 10, offset: int = 0
     ) -> List[OpinionResponse]:
         """获取观点排行榜"""
         db_opinions = OpinionDAO.get_ranking(db, sort_by, limit, offset)

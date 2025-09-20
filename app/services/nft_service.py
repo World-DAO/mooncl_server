@@ -13,6 +13,9 @@ from app.models import (
 from datetime import datetime
 from typing import List
 import uuid
+from app.utils.sui_client import sui_client
+import asyncio
+from app.utils.evm_client import evm_client
 
 
 class NFTService:
@@ -34,49 +37,47 @@ class NFTService:
                 success=False, error="Only the author can mint this opinion"
             )
 
-        # 生成唯一的Token ID
-        token_id = f"mooncl-{uuid.uuid4()}"
+        try:
 
-        # 创建NFT元数据
-        metadata = {
-            "name": f"MoonCL Opinion #{opinion_id}",
-            "description": opinion.content[:100]
-            + ("..." if len(opinion.content) > 100 else ""),
-            "created_at": opinion.created_at.isoformat(),
-            "creator": creator,
-        }
+            # 调用EVM合约铸造NFT
+            result = evm_client.mint_nft(
+                opinion_id=opinion_id,
+                content=opinion.content,
+                recipient_address=creator,
+            )
 
-        # 创建NFT记录
-        nft_data = {
-            "token_id": token_id,
-            "opinion_id": opinion_id,
-            "owner": creator,
-            "creator": creator,
-            "transaction_history": [
-                {
-                    "type": "mint",
-                    "from": None,
-                    "to": creator,
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "transaction_hash": f"tx-{uuid.uuid4()}",
-                }
-            ],
-            "metadata": metadata,
-        }
+            if not result["success"]:
+                return MintNFTResponse(
+                    success=False,
+                    error=f"Blockchain transaction failed: {result['error']}",
+                )
 
-        # 保存NFT记录
-        db_nft = NFTDAO.create(db, nft_data)
+            # 创建数据库NFT记录
+            nft_data = {
+                "token_id": str(result["token_id"]),
+                "opinion_id": opinion_id,
+                "owner_address": creator,
+                "mint_price": float(opinion.evaluate_price),
+                "current_price": None,
+                "is_for_sale": False,
+            }
 
-        # 更新观点状态为已铸造
-        OpinionService.mark_as_minted(db, opinion_id, db_nft.id)
+            # 保存NFT记录到数据库
+            db_nft = NFTDAO.create(db, nft_data)
 
-        # 返回铸造结果
-        return MintNFTResponse(
-            success=True,
-            nft_id=db_nft.id,
-            token_id=token_id,
-            transaction_hash=nft_data["transaction_history"][0]["transaction_hash"],
-        )
+            # 更新观点状态为已铸造
+            OpinionService.mark_as_minted(db, opinion_id)
+
+            # 返回铸造结果
+            return MintNFTResponse(
+                success=True,
+                nft_id=db_nft.id,
+                token_id=str(result["token_id"]),
+                transaction_hash=result["transaction_hash"],
+            )
+
+        except Exception as e:
+            return MintNFTResponse(success=False, error=f"Failed to mint NFT: {str(e)}")
 
     @staticmethod
     def transfer_nft(
@@ -89,36 +90,40 @@ class NFTService:
             return TransferNFTResponse(success=False, error="NFT not found")
 
         # 检查转出者是否是当前所有者
-        if nft.owner != from_address:
+        if nft.owner_address.lower() != from_address.lower():
             return TransferNFTResponse(
                 success=False, error="Only the owner can transfer this NFT"
             )
 
-        # 创建交易记录
-        transaction_data = {
-            "type": "transfer",
-            "from": from_address,
-            "to": to_address,
-            "timestamp": datetime.utcnow().isoformat(),
-            "transaction_hash": f"tx-{uuid.uuid4()}",
-        }
-
-        # 更新NFT所有者
-        success = NFTDAO.update_owner(db, nft_id, to_address, transaction_data)
-
-        if not success:
-            return TransferNFTResponse(
-                success=False, error="Failed to update NFT ownership"
+        try:
+            # 调用EVM合约转移NFT
+            result = evm_client.transfer_nft(
+                token_id=int(nft.token_id),
+                from_address=from_address,
+                to_address=to_address,
             )
 
-        # 返回转移结果
-        return TransferNFTResponse(
-            success=True,
-            nft_id=nft_id,
-            from_address=from_address,
-            to_address=to_address,
-            transaction_hash=transaction_data["transaction_hash"],
-        )
+            if not result["success"]:
+                return TransferNFTResponse(
+                    success=False,
+                    error=f"Blockchain transaction failed: {result['error']}",
+                )
+
+            # 更新数据库中的所有者信息
+            NFTDAO.update_owner(db, nft_id, to_address)
+
+            return TransferNFTResponse(
+                success=True,
+                nft_id=nft_id,
+                from_address=from_address,
+                to_address=to_address,
+                transaction_hash=result["transaction_hash"],
+            )
+
+        except Exception as e:
+            return TransferNFTResponse(
+                success=False, error=f"Failed to transfer NFT: {str(e)}"
+            )
 
     @staticmethod
     def get_user_nfts(db: Session, owner: str) -> List[NFTListResponse]:

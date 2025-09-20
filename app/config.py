@@ -25,7 +25,11 @@ class Settings(BaseSettings):
 
     # NFT配置
     NFT_CONTRACT_ADDRESS: str = ""
-    BLOCKCHAIN_RPC_URL: str = "https://sui-mainnet-rpc.com"
+
+    # Sui配置
+    SUI_RPC_URL: str = "https://fullnode.testnet.sui.io:443"
+    SUI_PACKAGE_ID: str = ""
+    SUI_NETWORK: str = "testnet"
 
     class Config:
         env_file = ".env"
