@@ -13,7 +13,6 @@ from app.models import (
 from datetime import datetime
 from typing import List
 import uuid
-from app.utils.sui_client import sui_client
 import asyncio
 from app.utils.evm_client import evm_client
 
