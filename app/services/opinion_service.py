@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.dao.opinion_dao import OpinionDAO
 from app.models import OpinionResponse, OpinionPriceResponse
+from app.utils.evaluate_opinion import calculate_opinion_price
 from datetime import datetime
 from typing import Optional, List
 
@@ -91,19 +92,13 @@ class OpinionService:
         if not db_opinion:
             return None
 
-        # 价格评估算法
-        base_price = 0.01  # 基础价格
-        content_length_factor = min(len(db_opinion.content) / 100, 2.0)  # 内容长度因子
-        days_old = (datetime.utcnow() - db_opinion.created_at).days
-        time_factor = max(0.5, 1 - (days_old * 0.01))  # 时间因子
-
-        final_price = base_price * content_length_factor * time_factor
+        final_price = calculate_opinion_price(db_opinion.content, db_opinion.created_at)
 
         # 更新数据库中的评估价格
         OpinionDAO.update_evaluate_price(db, opinion_id, final_price)
 
         return OpinionPriceResponse(
-            opinion_id=opinion_id, price=round(final_price, 6), currency="ETH"
+            opinion_id=opinion_id, price=final_price, currency="ETH"
         )
 
     @staticmethod

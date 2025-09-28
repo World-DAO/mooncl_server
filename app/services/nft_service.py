@@ -96,20 +96,6 @@ class NFTService:
             )
 
         try:
-            # 调用EVM合约转移NFT
-            result = evm_client.transfer_nft(
-                token_id=int(nft.token_id),
-                from_address=from_address,
-                to_address=to_address,
-            )
-
-            if not result["success"]:
-                return TransferNFTResponse(
-                    success=False,
-                    error=f"Blockchain transaction failed: {result['error']}",
-                )
-
-            # 更新数据库中的所有者信息
             NFTDAO.update_owner(db, nft_id, to_address)
 
             return TransferNFTResponse(
@@ -117,7 +103,7 @@ class NFTService:
                 nft_id=nft_id,
                 from_address=from_address,
                 to_address=to_address,
-                transaction_hash=result["transaction_hash"],
+                transaction_hash=None,
             )
 
         except Exception as e:
