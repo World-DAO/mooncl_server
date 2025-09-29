@@ -128,8 +128,13 @@ class EVMClient:
             if mint_fee > 0:
                 tx_params["value"] = mint_fee
 
+            encoded_content = content.encode("utf-8")
+
+            print("encoded_content: ", encoded_content)
+            print("metadata_uri: ", metadata_uri)
+
             transaction = self.contract.functions.mint(
-                content.encode("utf-8"), metadata_uri
+                encoded_content, metadata_uri
             ).build_transaction(tx_params)
 
             # 签名并发送
@@ -277,5 +282,61 @@ class EVMClient:
         except:
             return False
 
+    def set_nft_price(self, token_id: int, price_wei: int) -> Dict[str, Any]:
+        """设置NFT价格"""
+        try:
+            self._ensure_initialized()
+            account = self.w3.eth.account.from_key(self.private_key)
 
+            # 检查余额
+            balance = self.w3.eth.get_balance(account.address)
+            gas_price = self._get_gas_price()
+            estimated_cost = 100000 * gas_price  # 估算gas费用
+
+            if balance < estimated_cost:
+                return {
+                    "success": False,
+                    "error": f"余额不足，需要 {self.w3.from_wei(estimated_cost, 'ether')} CELO",
+                }
+
+            # 构建交易
+            transaction = self.contract.functions.setPrice(
+                token_id, price_wei
+            ).build_transaction(
+                {
+                    "from": account.address,
+                    "gas": 100000,
+                    "gasPrice": gas_price,
+                    "nonce": self.w3.eth.get_transaction_count(account.address),
+                    "chainId": self.chain_id,
+                }
+            )
+
+            # 签名并发送交易
+            signed_txn = self.w3.eth.account.sign_transaction(
+                transaction, self.private_key
+            )
+
+            try:
+                raw_tx = signed_txn.raw_transaction
+            except AttributeError:
+                raw_tx = signed_txn.rawTransaction
+
+            tx_hash = self.w3.eth.send_raw_transaction(raw_tx)
+            receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
+
+            return {
+                "success": True,
+                "transaction_hash": tx_hash.hex(),
+                "gas_used": receipt.gasUsed,
+                "token_id": token_id,
+                "price_wei": price_wei,
+                "price_eth": float(self.w3.from_wei(price_wei, "ether")),
+            }
+
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+
+# 创建全局实例
 evm_client = EVMClient()

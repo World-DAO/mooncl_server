@@ -1,9 +1,9 @@
 from datetime import datetime
 
 
-def calculate_opinion_price(content: str, created_at: datetime) -> float:
+def calculate_price(content: str, created_at: datetime) -> float:
     """
-    观点价格评估算法
+    价格评估算法
 
     Args:
         content: 观点内容

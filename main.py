@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, opinion, nft
+from app.routers import auth, nft
 from app.database import create_tables, test_connection
+from app.utils.event_listener import event_listener
 import uvicorn
+import asyncio
 
 
 # 创建FastAPI应用实例
@@ -20,7 +22,7 @@ app.add_middleware(
 
 # 启动时测试数据库连接并创建表
 @app.on_event("startup")
-def startup_event():
+async def startup_event():
     print("Starting MoonCL Server...")
     if test_connection():
         create_tables()
@@ -28,10 +30,25 @@ def startup_event():
     else:
         print("Failed to connect to database!")
 
+    # 启动事件监听器
+    try:
+        event_listener.initialize()
+        asyncio.create_task(event_listener.start_listening())
+        print("Event listener started successfully!")
+    except Exception as e:
+        print(f"Failed to start event listener: {e}")
 
-# 注册路由
+
+# 关闭时停止事件监听器
+@app.on_event("shutdown")
+async def shutdown_event():
+    print("Shutting down MoonCL Server...")
+    event_listener.stop_listening()
+    print("Event listener stopped")
+
+
+# 注册路由 - 移除opinion路由
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
-app.include_router(opinion.router, prefix="/api/v1/opinions", tags=["opinions"])
 app.include_router(nft.router, prefix="/api/v1/nfts", tags=["nfts"])
 
 

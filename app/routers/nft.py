@@ -1,16 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from sqlalchemy.orm import Session
-from app.models import (
-    MintNFTRequest,
-    MintNFTResponse,
-    TransferNFTRequest,
-    TransferNFTResponse,
-    NFTListResponse,
-    PurchaseNFTRequest,
-    PurchaseNFTResponse,
-)
+from app.models import NFTResponse, NFTListResponse
 from app.services.nft_service import NFTService
-from app.utils.jwt_auth import authenticate
 from app.database import get_db
 from typing import List
 
@@ -18,108 +9,37 @@ from typing import List
 router = APIRouter()
 
 
-@router.post("/mint", response_model=MintNFTResponse)
-def mint_nft(
-    request: MintNFTRequest,
-    address: str = Depends(authenticate),
+@router.get("/ranking", response_model=List[NFTListResponse])
+def get_nft_ranking(
+    limit: int = Query(20, description="返回数量限制"),
     db: Session = Depends(get_db),
 ):
-    """将观点铸造为NFT"""
+    """获取NFT排行榜（按价格排序）"""
     try:
-        result = NFTService.mint_nft(db, request.opinion_id, address)
-        if not result.success:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail=result.error
-            )
-        return result
+        return NFTService.get_nft_ranking(db, limit)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to mint NFT: {str(e)}",
+            detail=f"Failed to get NFT ranking: {str(e)}",
         )
 
 
-@router.get("/mint/estimate")
-def get_mint_estimate(
-    opinion_id: int = Query(..., description="观点ID"),
-    db: Session = Depends(get_db)
-):
-    """获取NFT铸造估价"""
-    try:
-        estimate = NFTService.get_mint_estimate(db, opinion_id)
-        return estimate
-    except Exception as e:
+@router.get("/detail/{token_id}", response_model=NFTResponse)
+def get_nft_detail(token_id: int, db: Session = Depends(get_db)):
+    """获取NFT详情"""
+    nft = NFTService.get_nft_by_token_id(db, token_id)
+    if not nft:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get mint estimate: {str(e)}",
+            status_code=status.HTTP_404_NOT_FOUND, detail="NFT not found"
         )
-
-
-@router.get("/purchase/estimate")
-def get_purchase_estimate(
-    nft_id: int = Query(..., description="NFT ID"),
-    db: Session = Depends(get_db)
-):
-    """获取NFT购买估价"""
-    try:
-        estimate = NFTService.get_purchase_estimate(db, nft_id)
-        return estimate
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get purchase estimate: {str(e)}",
-        )
-
-
-@router.post("/purchase", response_model=PurchaseNFTResponse)
-def purchase_nft(
-    request: PurchaseNFTRequest,
-    address: str = Depends(authenticate),
-    db: Session = Depends(get_db),
-):
-    """购买NFT"""
-    try:
-        result = NFTService.purchase_nft(db, request.nft_id, address)
-        if not result.success:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail=result.error
-            )
-        return result
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to purchase NFT: {str(e)}",
-        )
-
-
-@router.post("/transfer", response_model=TransferNFTResponse)
-def transfer_nft(
-    request: TransferNFTRequest,
-    address: str = Depends(authenticate),
-    db: Session = Depends(get_db),
-):
-    """转移NFT所有权"""
-    try:
-        result = NFTService.transfer_nft(
-            db, request.nft_id, address, request.to_address
-        )
-        if not result.success:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail=result.error
-            )
-        return result
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to transfer NFT: {str(e)}",
-        )
+    return nft
 
 
 @router.get("/user/{user_address}", response_model=List[NFTListResponse])
 def get_user_nfts(user_address: str, db: Session = Depends(get_db)):
-    """获取用户拥有的NFT列表"""
+    """获取用户NFT列表"""
     try:
-        return NFTService.get_user_nfts(db, user_address)
+        return NFTService.get_nfts_by_owner(db, user_address)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

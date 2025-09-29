@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     # Celo EVM 配置
     EVM_RPC_URL: str = os.getenv("EVM_RPC_URL", "")
     NFT_CONTRACT_ADDRESS: str = os.getenv("NFT_CONTRACT_ADDRESS", "")
+    LAUNCHPAD_CONTRACT_ADDRESS: str = os.getenv("LAUNCHPAD_CONTRACT_ADDRESS", "")
     PRIVATE_KEY: str = os.getenv("PRIVATE_KEY", "")
 
     class Config:

@@ -15,6 +15,7 @@
 Authorization: Bearer <JWT_TOKEN>
 ```
 
+
 ---
 
 ## 1. 认证模块 (Authentication)
@@ -79,342 +80,74 @@ Authorization: Bearer <JWT_TOKEN>
 
 ---
 
-## 2. 观点模块 (Opinions) - 5个接口
-- `POST /api/v1/opinions/` - 创建观点
-- `GET /api/v1/opinions/{opinion_id}` - 获取观点详情
-- `GET /api/v1/opinions/user/{user_address}` - 获取用户观点列表
-- `GET /api/v1/opinions/ranking` - 获取观点排行榜
-- `GET /api/v1/opinions/{opinion_id}/price` - 获取观点价格
 
-### 2.1 创建观点
-
-**接口**: `POST /api/v1/opinions/`
-
-**描述**: 创建新的观点内容
-
-**认证**: 需要JWT Token
-
-**请求参数**:
-```json
-{
-  "content": "string"
-}
-```
-
-**响应**:
-```json
-{
-  "id": 1,
-  "address": "string",
-  "content": "string",
-  "is_minted": false,
-  "evaluate_price": 0.01,
-  "created_at": "string",
-  "updated_at": null
-}
-```
-
-**状态码**:
-- `200`: 创建成功
-- `401`: 未认证
-- `500`: 服务器内部错误
-
----
-
-### 2.2 获取观点详情
-
-**接口**: `GET /api/v1/opinions/detail/{opinion_id}`
-
-**描述**: 根据ID获取观点详细信息
-
-**路径参数**:
-- `opinion_id` (integer): 观点ID
-
-**响应**:
-```json
-{
-  "id": 1,
-  "address": "string",
-  "content": "string",
-  "is_minted": false,
-  "evaluate_price": 0.01,
-  "created_at": "string",
-  "updated_at": null
-}
-```
-
-**状态码**:
-- `200`: 获取成功
-- `404`: 观点不存在
-
----
-
-
-### 2.3 获取用户观点列表
-
-**接口**: `GET /api/v1/opinions/user/{user_address}`
-
-**描述**: 获取指定用户的所有观点
-
-**路径参数**:
-- `user_address` (string)
-
-**响应**:
-```json
-[
-  {
-    "id": 1,
-    "title": "string",
-    "content": "string",
-    "address": "string",
-    "created_at": "string",
-    "likes": 0,
-    "is_minted": false,
-    "nft_id": null
-  }
-]
-```
-
-**状态码**:
-- `200`: 获取成功
-- `500`: 服务器内部错误
-
----
-
-### 2.4 获取观点排行榜
-
-**接口**: `GET /api/v1/opinions/ranking`
-
-**描述**: 获取观点排行榜，支持多种排序方式
-
-**查询参数**:
-- `sort_by` (string, 可选): 排序方式，默认"price"
-  - `price` - 按价格排序
-  - `recent` - 按创建时间排序
-- `limit` (integer, 可选): 返回数量限制，默认10，最大100
-- `offset` (integer, 可选): 偏移量，用于分页，默认0
-
-**响应**:
-```json
-[
-  {
-    "id": 1,
-    "address": "string",
-    "content": "string",
-    "is_minted": true,
-    "evaluate_price": 0.5,
-    "created_at": "string",
-    "updated_at": null
-  }
-]
-```
-
-**状态码**:
-- `200`: 获取成功
-- `400`: 请求参数错误
-- `500`: 服务器内部错误
-
----
-
-### 2.5 获取观点价格
-
-**接口**: `GET /api/v1/opinions/detail/{opinion_id}/price`
-
-**描述**: 获取指定观点的当前价格信息
-
-**路径参数**:
-- `opinion_id` (integer): 观点ID
-
-**响应**:
-```json
-{
-  "opinion_id": 1,
-  "price": 0.01,
-}
-```
-
-**状态码**:
-- `200`: 获取成功
-- `404`: 观点不存在
-- `500`: 服务器内部错误
-
----
-
-
-## 3. NFT模块 (6个接口)
-- `POST /api/v1/nfts/mint` - 铸造NFT
-- `GET /api/v1/nfts/mint/estimate` - 获取NFT铸造估价
-- `GET /api/v1/nfts/purchase/estimate` - 获取NFT购买估价
-- `POST /api/v1/nfts/purchase` - 购买NFT
-- `POST /api/v1/nfts/transfer` - 转移NFT
+## 3. NFT模块 (3个接口)
+- `GET /api/v1/nfts/ranking` - 获取NFT排行榜
+- `GET /api/v1/nfts/detail/{token_id}` - 获取NFT详情
 - `GET /api/v1/nfts/user/{user_address}` - 获取用户NFT列表
 
-### 3.1 铸造NFT
+### 3.1 获取NFT排行榜
 
-**接口**: `POST /api/v1/nfts/mint`
+**接口**: `GET /api/v1/nfts/ranking`
 
-**描述**: 将观点铸造为NFT
+**描述**: 获取NFT排行榜，按价格排序
 
-**认证**: 需要JWT Token
-
-**请求参数**:
-```json
-{
-  "opinion_id": 1  
-}
-```
+**查询参数**:
+- `limit` (integer, 可选): 返回数量限制，默认20
 
 **响应**:
 ```json
-{
-  "success": true,
-  "nft_id": 1,
-  "token_id": "string",
-  "transaction_hash": "string",
-  "error": null
-}
+[
+  {
+    "token_id": 1,
+    "owner_address": "string",
+    "content": "string",
+    "evaluate_price": 0.01,
+    "current_price": 0.5,
+    "created_at": "2024-01-01T00:00:00"
+  }
+]
 ```
 
 **状态码**:
-- `200`: 铸造成功
-- `400`: 请求参数错误或业务逻辑错误
-- `401`: 未认证
+- `200`: 获取成功
 - `500`: 服务器内部错误
 
 ---
 
-### 3.2 获取NFT铸造估价
+### 3.2 获取NFT详情
 
-**接口**: `GET /api/v1/nfts/mint/estimate`
+**接口**: `GET /api/v1/nfts/detail/{token_id}`
 
-**描述**: 获取NFT铸造所需的Gas费用估价
+**描述**: 根据token_id获取NFT详细信息
 
-**查询参数**:
-- `opinion_id` (integer): 观点ID
+**路径参数**:
+- `token_id` (integer): NFT的token ID
 
 **响应**:
 ```json
 {
-  "success": true,
-  "opinion_id": 1,
-  "estimated_fee": 0.001,
-  "error": null
+  "token_id": 1,
+  "owner_address": "string",
+  "content": "string",
+  "evaluate_price": 0.01,
+  "current_price": 0.5,
+  "created_at": "2024-01-01T00:00:00",
+  "updated_at": "2024-01-01T00:00:00"
 }
 ```
 
 **状态码**:
 - `200`: 获取成功
-- `400`: 观点ID无效或已铸造
-- `500`: 服务器内部错误
+- `404`: NFT不存在
 
 ---
 
-### 3.3 获取NFT购买估价
-
-**接口**: `GET /api/v1/nfts/purchase/estimate`
-
-**描述**: 获取购买NFT的费用估价（包含交易费用）
-
-**查询参数**:
-- `nft_id` (integer): NFT ID
-
-**响应**:
-```json
-{
-  "success": true,
-  "nft_id": 1,
-  "estimated_price": 0.5,
-  "currency": "ETH",
-  "error": null
-}
-```
-
-**状态码**:
-- `200`: 获取成功
-- `400`: NFT不存在或不在售
-- `500`: 服务器内部错误
-
----
-
-### 3.4 购买NFT
-
-**接口**: `POST /api/v1/nfts/purchase`
-
-**描述**: 购买指定的NFT（交易NFT）
-
-**认证**: 需要JWT Token
-
-**请求参数**:
-```json
-{
-  "nft_id": 1
-}
-```
-
-**响应**:
-```json
-{
-  "success": true,
-  "nft_id": 1,
-  "buyer": "string",
-  "seller": "string",
-  "price": 0.5,
-  "currency": "ETH",
-  "transaction_hash": "string",
-  "error": null
-}
-```
-
-**状态码**:
-- `200`: 购买成功
-- `400`: 请求参数错误、NFT不在售或价格不匹配
-- `401`: 未认证
-- `403`: 不能购买自己的NFT
-- `500`: 服务器内部错误
-
----
-
-### 3.5 转移NFT
-
-**接口**: `POST /api/v1/nfts/transfer`
-
-**描述**: 免费转移NFT所有权（非交易转移）
-
-**认证**: 需要JWT Token
-
-**请求参数**:
-```json
-{
-  "nft_id": 1,
-  "to_address": "string"
-}
-```
-
-**响应**:
-```json
-{
-  "success": true,
-  "nft_id": 1,
-  "from_address": "string",
-  "to_address": "string",
-  "transaction_hash": "string",
-  "error": null
-}
-```
-
-**状态码**:
-- `200`: 转移成功
-- `400`: 请求参数错误或业务逻辑错误
-- `401`: 未认证
-- `500`: 服务器内部错误
-
----
-
-### 3.6 获取用户NFT列表
+### 3.3 获取用户NFT列表
 
 **接口**: `GET /api/v1/nfts/user/{user_address}`
 
-**描述**: 获取用户拥有的所有NFT
+**描述**: 获取指定用户拥有的所有NFT
 
 **路径参数**:
 - `user_address` (string): 用户区块链地址
@@ -423,14 +156,12 @@ Authorization: Bearer <JWT_TOKEN>
 ```json
 [
   {
-    "id": 1,
-    "token_id": "string",
+    "token_id": 1,
     "owner_address": "string",
-    "mint_price": 0.01,
+    "content": "string",
+    "evaluate_price": 0.01,
     "current_price": 0.5,
-    "is_for_sale": true,
-    "created_at": "string",
-    "opinion_content": "string"
+    "created_at": "2024-01-01T00:00:00"
   }
 ]
 ```
@@ -491,7 +222,18 @@ Authorization: Bearer <JWT_TOKEN>
 - `404`: 资源不存在
 - `500`: 服务器内部错误
 
+## 数据模型说明
 
+### NFT响应模型字段说明
+
+- `token_id`: NFT的唯一标识符（整数类型）
+- `owner_address`: NFT当前所有者的区块链地址
+- `content`: NFT的内容文本
+- `evaluate_price`: NFT的评估价格（可为空）
+- `current_price`: NFT的当前市场价格（可为空）
+- `mint_price`: NFT的铸造价格（可为空）
+- `created_at`: NFT创建时间
+- `updated_at`: NFT最后更新时间（仅在详情接口中返回）
 
 ## 注意事项
 
@@ -500,3 +242,5 @@ Authorization: Bearer <JWT_TOKEN>
 3. **数据库**: 使用MySQL存储数据
 4. **区块链集成**: 基于Sui区块链进行身份验证和NFT操作
 5. **错误处理**: 所有接口都包含适当的错误处理和状态码返回
+6. **数据类型**: token_id在所有接口中统一使用整数类型
+7. **字段命名**: 价格相关字段统一使用evaluate_price命名规范

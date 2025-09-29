@@ -210,7 +210,7 @@ def test_mint_nft():
         account = evm_client.w3.eth.account.from_key(settings.PRIVATE_KEY)
 
         # 测试数据
-        test_content = "这是一个测试观点内容，用于验证在 Celo 网络上的 NFT 铸造功能"
+        test_content = "区块链技术将改变世界, 它将带来新的机遇和挑战"
         recipient_address = account.address
 
         print(f"📝 测试内容: {test_content}")
