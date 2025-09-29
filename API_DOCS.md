@@ -81,12 +81,12 @@ Authorization: Bearer <JWT_TOKEN>
 ---
 
 
-## 3. NFT模块 (3个接口)
+## 2. NFT模块 (3个接口)
 - `GET /api/v1/nfts/ranking` - 获取NFT排行榜
 - `GET /api/v1/nfts/detail/{token_id}` - 获取NFT详情
 - `GET /api/v1/nfts/user/{user_address}` - 获取用户NFT列表
 
-### 3.1 获取NFT排行榜
+### 2.1 获取NFT排行榜
 
 **接口**: `GET /api/v1/nfts/ranking`
 
@@ -115,7 +115,7 @@ Authorization: Bearer <JWT_TOKEN>
 
 ---
 
-### 3.2 获取NFT详情
+### 2.2 获取NFT详情
 
 **接口**: `GET /api/v1/nfts/detail/{token_id}`
 
@@ -143,7 +143,7 @@ Authorization: Bearer <JWT_TOKEN>
 
 ---
 
-### 3.3 获取用户NFT列表
+### 2.3 获取用户NFT列表
 
 **接口**: `GET /api/v1/nfts/user/{user_address}`
 
@@ -172,9 +172,9 @@ Authorization: Bearer <JWT_TOKEN>
 
 ---
 
-## 4. 系统接口
+## 3. 系统接口
 
-### 4.1 根路径
+### 3.1 根路径
 
 **接口**: `GET /`
 
@@ -189,7 +189,7 @@ Authorization: Bearer <JWT_TOKEN>
 
 ---
 
-### 4.2 健康检查
+### 3.2 健康检查
 
 **接口**: `GET /health`
 
@@ -221,26 +221,3 @@ Authorization: Bearer <JWT_TOKEN>
 - `401`: 未认证或认证失败
 - `404`: 资源不存在
 - `500`: 服务器内部错误
-
-## 数据模型说明
-
-### NFT响应模型字段说明
-
-- `token_id`: NFT的唯一标识符（整数类型）
-- `owner_address`: NFT当前所有者的区块链地址
-- `content`: NFT的内容文本
-- `evaluate_price`: NFT的评估价格（可为空）
-- `current_price`: NFT的当前市场价格（可为空）
-- `mint_price`: NFT的铸造价格（可为空）
-- `created_at`: NFT创建时间
-- `updated_at`: NFT最后更新时间（仅在详情接口中返回）
-
-## 注意事项
-
-1. **认证Token有效期**: JWT Token有效期为7天
-2. **CORS配置**: API支持跨域请求
-3. **数据库**: 使用MySQL存储数据
-4. **区块链集成**: 基于Sui区块链进行身份验证和NFT操作
-5. **错误处理**: 所有接口都包含适当的错误处理和状态码返回
-6. **数据类型**: token_id在所有接口中统一使用整数类型
-7. **字段命名**: 价格相关字段统一使用evaluate_price命名规范
