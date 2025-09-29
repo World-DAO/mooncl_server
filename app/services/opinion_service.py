@@ -18,7 +18,7 @@ class OpinionService:
         }
 
         db_opinion = OpinionDAO.create(db, opinion_data)
-        evaluate_opinion_price(db, db_opinion.id)
+        OpinionService.evaluate_opinion_price(db, db_opinion.id)
 
         return OpinionResponse(
             id=db_opinion.id,

@@ -113,7 +113,7 @@ class NFTService:
     @staticmethod
     def get_user_nfts(db: Session, owner: str) -> List[NFTListResponse]:
         """获取用户拥有的NFT列表"""
-        nfts = NFTDAO.get_by_owner(db, owner)
+        nfts = NFTDAO.get_by_owner_address(db, owner)
         return [
             NFTListResponse(
                 id=nft.id,

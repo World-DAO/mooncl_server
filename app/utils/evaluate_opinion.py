@@ -13,7 +13,7 @@ def calculate_opinion_price(content: str, created_at: datetime) -> float:
         评估价格
     """
     # 基础价格
-    base_price = 0.01
+    base_price = 1
 
     # 内容长度因子 (最大2倍)
     content_length_factor = min(len(content) / 100, 2.0)
