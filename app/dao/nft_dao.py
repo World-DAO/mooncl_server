@@ -33,12 +33,7 @@ class NFTDAO:
     @staticmethod
     def get_ranking_by_price(db: Session, limit: int = 20) -> List[NFTDB]:
         """获取NFT排行榜（按价格排序）"""
-        return (
-            db.query(NFTDB)
-            .order_by(desc(NFTDB.current_price), desc(NFTDB.mint_price))
-            .limit(limit)
-            .all()
-        )
+        return db.query(NFTDB).order_by(desc(NFTDB.current_price)).limit(limit).all()
 
     @staticmethod
     def update_owner(db: Session, token_id: int, new_owner: str) -> bool:
