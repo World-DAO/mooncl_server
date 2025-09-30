@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, nft
+from app.routers import auth, nft, nft_polkadot
 from app.database import create_tables, test_connection
 from app.utils.event_listener import event_listener
+from app.utils.polkadot_listener import polkadot_event_listener
+
 import uvicorn
 import asyncio
 
@@ -33,7 +35,9 @@ async def startup_event():
     # 启动事件监听器
     try:
         event_listener.initialize()
+        polkadot_event_listener.initialize()
         asyncio.create_task(event_listener.start_listening())
+        asyncio.create_task(polkadot_event_listener.start_listening())
         print("Event listener started successfully!")
     except Exception as e:
         print(f"Failed to start event listener: {e}")
@@ -44,12 +48,16 @@ async def startup_event():
 async def shutdown_event():
     print("Shutting down MoonCL Server...")
     event_listener.stop_listening()
+    polkadot_event_listener.stop_listening()
     print("Event listener stopped")
 
 
 # 注册路由 - 移除opinion路由
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
 app.include_router(nft.router, prefix="/api/v1/nfts", tags=["nfts"])
+app.include_router(
+    nft_polkadot.router, prefix="/api/v1/nfts/polkadot", tags=["nfts_polkadot"]
+)
 
 
 # 根路径

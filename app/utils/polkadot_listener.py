@@ -5,8 +5,8 @@ from web3 import Web3
 from web3.contract import Contract
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.dao.nft_dao import NFTDAO
-from app.utils.evm_client import evm_client
+from app.dao.nft_dao_polkadot import NFTPolkadotDAO
+from app.utils.polkadot_client import polkadot_client
 from app.utils.evaluate import calculate_price
 from app.config import settings
 import json
@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class EventListener:
+class PolkadotListener:
     def __init__(self):
         self.w3: Optional[Web3] = None
         self.nft_contract: Optional[Contract] = None
@@ -28,11 +28,11 @@ class EventListener:
     def initialize(self):
         """初始化事件监听器"""
         try:
-            self.w3 = evm_client.w3
-            self.nft_contract = evm_client.contract
+            self.w3 = polkadot_client.w3
+            self.nft_contract = polkadot_client.contract
 
             # 初始化AiLaunchpad合约
-            launchpad_address = settings.LAUNCHPAD_CONTRACT_ADDRESS
+            launchpad_address = settings.POLKADOT_LAUNCHPAD_CONTRACT_ADDRESS
             with open("contracts/AiLaunchpad.json", "r") as f:
                 launchpad_abi = json.load(f)
 
@@ -137,7 +137,7 @@ class EventListener:
 
             try:
                 # 检查NFT是否已存在
-                existing_nft = NFTDAO.get_by_token_id(db, token_id)
+                existing_nft = NFTPolkadotDAO.get_by_token_id(db, token_id)
                 if existing_nft:
                     logger.info(f"NFT with token_id {token_id} already exists")
                     return
@@ -168,7 +168,7 @@ class EventListener:
                     "current_price": base_price,
                 }
 
-                db_nft = NFTDAO.create(db, nft_data)
+                db_nft = NFTPolkadotDAO.create(db, nft_data)
 
                 # 计算NFT价格
                 gas_factor = 0.001
@@ -188,7 +188,7 @@ class EventListener:
                         f"Successfully set price for token {token_id}: {price_result['transaction_hash']}"
                     )
                     # 更新数据库中的当前价格
-                    NFTDAO.update_current_price(db, token_id, final_price_eth)
+                    NFTPolkadotDAO.update_current_price(db, token_id, final_price_eth)
                 else:
                     logger.error(
                         f"Failed to set price for token {token_id}: {price_result['error']}"
@@ -217,7 +217,7 @@ class EventListener:
 
             try:
                 # 更新NFT所有者
-                success = NFTDAO.update_owner(db, token_id, buyer)
+                success = NFTPolkadotDAO.update_owner(db, token_id, buyer)
 
                 if success:
                     logger.info(
@@ -235,4 +235,4 @@ class EventListener:
 
 
 # 创建全局事件监听器实例
-event_listener = EventListener()
+polkadot_event_listener = PolkadotListener()

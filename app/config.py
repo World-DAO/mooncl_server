@@ -23,14 +23,31 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7天
 
-    # Celo EVM 配置
+    # EVM 配置
     EVM_RPC_URL: str = os.getenv("EVM_RPC_URL", "")
+    POLKADOT_RPC_URL: str = os.getenv("POLKADOT_RPC_URL", "")
     NFT_CONTRACT_ADDRESS: str = os.getenv("NFT_CONTRACT_ADDRESS", "")
+    POLKADOT_NFT_CONTRACT_ADDRESS: str = os.getenv("POLKADOT_NFT_CONTRACT_ADDRESS", "")
     LAUNCHPAD_CONTRACT_ADDRESS: str = os.getenv("LAUNCHPAD_CONTRACT_ADDRESS", "")
+    POLKADOT_LAUNCHPAD_CONTRACT_ADDRESS: str = os.getenv(
+        "POLKADOT_LAUNCHPAD_CONTRACT_ADDRESS", ""
+    )
     PRIVATE_KEY: str = os.getenv("PRIVATE_KEY", "")
 
     # AI评估配置
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+
+    # EigenLayer配置
+    EIGEN_RPC_URL: str = os.getenv("EIGEN_RPC_URL", "")
+    EIGEN_AVS_CONTRACT: str = os.getenv("EIGEN_AVS_CONTRACT", "")
+    EIGEN_OPERATOR_PRIVATE_KEY: str = os.getenv("EIGEN_OPERATOR_PRIVATE_KEY", "")
+    EIGEN_SLASHING_CONTRACT: str = os.getenv("EIGEN_SLASHING_CONTRACT", "")
+
+    # AVS配置
+    AVS_NAME: str = "MoonCL-AI-Evaluator"
+    AVS_VERSION: str = "1.0.0"
+    MIN_OPERATOR_STAKE: float = 32.0
+    CONSENSUS_THRESHOLD: int = 2
 
     class Config:
         env_file = ".env"
