@@ -81,7 +81,7 @@ Authorization: Bearer <JWT_TOKEN>
 ---
 
 
-## 2. NFT模块 (3个接口)
+## 2. NFT模块 (3个接口) [Celo]
 - `GET /api/v1/nfts/ranking` - 获取NFT排行榜
 - `GET /api/v1/nfts/detail/{token_id}` - 获取NFT详情
 - `GET /api/v1/nfts/user/{user_address}` - 获取用户NFT列表
@@ -172,34 +172,112 @@ Authorization: Bearer <JWT_TOKEN>
 
 ---
 
-## 3. 系统接口
+## 3. Polkadot NFT模块 (3个接口) [Polkadot]
+- `GET /api/v1/nfts/polkadot/ranking` - 获取Polkadot链NFT排行榜
+- `GET /api/v1/nfts/polkadot/detail/{token_id}` - 获取Polkadot链NFT详情
+- `GET /api/v1/nfts/polkadot/user/{user_address}` - 获取用户在Polkadot链上的NFT列表
 
-### 3.1 根路径
+说明：
+- 路径前缀与服务代码一致：`/api/v1/nfts/polkadot`
+- 注意：路径参数 `token_id` 为整数；响应中的 `token_id` 字段为字符串（与模型一致）
 
-**接口**: `GET /`
+### 3.1 获取Polkadot NFT排行榜
 
-**描述**: API根路径，返回基本信息
+接口: `GET /api/v1/nfts/polkadot/ranking`
 
-**响应**:
+描述: 获取Polkadot链NFT排行榜，按价格排序
+
+查询参数:
+- `limit` (integer, 可选): 返回数量限制，默认20
+
+响应示例:
 ```json
-{
-  "message": "MoonCL Server API"
-}
+[
+  {
+    "token_id": "123", 
+    "owner_address": "5F3sa2T...",
+    "content": "string",
+    "evaluate_price": 0.01,
+    "current_price": 0.5,
+    "created_at": "2024-01-01T00:00:00"
+  }
+]
+```
+
+状态码:
+- `200`: 获取成功
+- `500`: 服务器内部错误
+
+示例:
+```bash
+curl -X GET "https://<base-url>/api/v1/nfts/polkadot/ranking?limit=20" -H "Content-Type: application/json"
 ```
 
 ---
 
-### 3.2 健康检查
+### 3.2 获取Polkadot NFT详情
 
-**接口**: `GET /health`
+接口: `GET /api/v1/nfts/polkadot/detail/{token_id}`
 
-**描述**: 服务健康状态检查
+描述: 根据token_id获取Polkadot链NFT详细信息
 
-**响应**:
+路径参数:
+- `token_id` (integer): NFT的token ID（路径参数为整数；响应中的字段为字符串）
+
+响应示例:
 ```json
 {
-  "status": "healthy"
+  "token_id": "123",
+  "owner_address": "5F3sa2T...",
+  "content": "string",
+  "evaluate_price": 0.01,
+  "current_price": 0.5,
+  "created_at": "2024-01-01T00:00:00",
+  "updated_at": "2024-01-01T00:00:00"
 }
+```
+
+状态码:
+- `200`: 获取成功
+- `404`: NFT不存在
+
+示例:
+```bash
+curl -X GET "https://<base-url>/api/v1/nfts/polkadot/detail/123" -H "Content-Type: application/json"
+```
+
+---
+
+### 3.3 获取用户Polkadot NFT列表
+
+接口: `GET /api/v1/nfts/polkadot/user/{user_address}`
+
+描述: 获取指定用户在Polkadot链上的所有NFT
+
+路径参数:
+- `user_address` (string): Polkadot地址（SS58格式）
+
+响应示例:
+```json
+[
+  {
+    "token_id": "123",
+    "owner_address": "5F3sa2T...",
+    "content": "string",
+    "evaluate_price": 0.01,
+    "current_price": 0.5,
+    "created_at": "2024-01-01T00:00:00"
+  }
+]
+```
+
+状态码:
+- `200`: 获取成功
+- `500`: 服务器内部错误
+
+示例:
+```bash
+curl -X GET "https://<base-url>/api/v1/nfts/polkadot/user/5F3sa2T..." -H "Content-Type: application/json"
 ```
 
 ---
