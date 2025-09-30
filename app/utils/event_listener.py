@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dao.nft_dao import NFTDAO
 from app.utils.evm_client import evm_client
+from app.utils.evaluate import calculate_price
 from app.config import settings
 import json
 import hashlib
@@ -129,8 +130,6 @@ class EventListener:
         try:
             token_id = event["args"]["tokenId"]
             minter = event["args"]["minter"]
-            text_hash = event["args"]["textHash"].hex()
-            uri = event["args"]["uri"]
             content = event["args"]["content"]
 
             # 获取数据库会话
@@ -138,7 +137,7 @@ class EventListener:
 
             try:
                 # 检查NFT是否已存在
-                existing_nft = NFTDAO.get_by_token_id(db, str(token_id))
+                existing_nft = NFTDAO.get_by_token_id(db, token_id)
                 if existing_nft:
                     logger.info(f"NFT with token_id {token_id} already exists")
                     return
@@ -153,24 +152,23 @@ class EventListener:
                     f"Processing mint event for content: {content_text[:100]}..."
                 )
 
-                # 计算基础价格（可以根据内容长度、复杂度等因素）
-                base_price = self._calculate_base_price(content_text)
+                # 使用AI智能评估价格
+                base_price = await calculate_price(content_text)
+                print(f"evaluate success！Base_price: {base_price}")
 
-                # 创建NFT记录 - 直接从链上事件创建，不依赖预先存在的opinion
+                # 创建NFT记录
                 nft_data = {
-                    "token_id": str(token_id),
+                    "token_id": token_id,
                     "owner_address": minter,
                     "content": content_text,
-                    "text_hash": text_hash,
-                    "mint_price": base_price,
-                    "current_price": None,
-                    "is_for_sale": False,
+                    "evaluate_price": base_price,
+                    "current_price": base_price,
                 }
 
                 db_nft = NFTDAO.create(db, nft_data)
 
-                # 计算NFT价格（基于内容估价 + 一些调整因子）
-                gas_factor = 0.001  # 额外的gas费用因子
+                # 计算NFT价格
+                gas_factor = 0.001
                 final_price_eth = base_price + gas_factor
 
                 # 转换为wei
@@ -187,7 +185,7 @@ class EventListener:
                         f"Successfully set price for token {token_id}: {price_result['transaction_hash']}"
                     )
                     # 更新数据库中的当前价格
-                    NFTDAO.update_price(db, str(token_id), final_price_eth)
+                    NFTDAO.update_current_price(db, token_id, final_price_eth)
                 else:
                     logger.error(
                         f"Failed to set price for token {token_id}: {price_result['error']}"
@@ -195,7 +193,6 @@ class EventListener:
 
                 logger.info(
                     f"✅ Successfully processed Minted event for token {token_id}, "
-                    f"NFT ID {db_nft.id}"
                 )
 
             finally:
@@ -203,27 +200,6 @@ class EventListener:
 
         except Exception as e:
             logger.error(f"Error handling Minted event: {e}")
-
-    def _calculate_base_price(self, content: str) -> float:
-        """根据内容计算基础价格"""
-        # 基础价格
-        base_price = 0.001
-
-        # 根据内容长度调整价格
-        length_factor = len(content) * 0.00001
-
-        # 可以添加更多因子，比如内容复杂度、关键词等
-        # complexity_factor = self._calculate_complexity(content)
-
-        return base_price + length_factor
-
-    def _calculate_text_hash(self, content: str) -> str:
-        """计算文本的keccak256哈希值"""
-        content_bytes = content.encode("utf-8")
-        hash_bytes = hashlib.sha3_256(
-            content_bytes
-        ).digest()  # 使用sha3_256作为keccak256的替代
-        return "0x" + hash_bytes.hex()
 
     async def _handle_bought_event(self, event):
         """处理单个Bought事件"""
@@ -238,12 +214,9 @@ class EventListener:
 
             try:
                 # 更新NFT所有者
-                success = NFTDAO.update_owner(db, str(token_id), buyer)
+                success = NFTDAO.update_owner(db, token_id, buyer)
 
                 if success:
-                    # 将NFT标记为不在售
-                    NFTDAO.update_sale_status(db, str(token_id), False)
-
                     logger.info(
                         f"✅ Successfully processed Bought event for token {token_id}: "
                         f"{seller} -> {buyer}, price: {self.w3.from_wei(price, 'ether')} ETH"

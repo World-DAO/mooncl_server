@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     LAUNCHPAD_CONTRACT_ADDRESS: str = os.getenv("LAUNCHPAD_CONTRACT_ADDRESS", "")
     PRIVATE_KEY: str = os.getenv("PRIVATE_KEY", "")
 
+    # AI评估配置
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

@@ -248,22 +248,10 @@
                 "type": "address"
             },
             {
-                "indexed": true,
-                "internalType": "bytes32",
-                "name": "textHash",
-                "type": "bytes32"
-            },
-            {
                 "indexed": false,
                 "internalType": "string",
-                "name": "uri",
-                "type": "string"
-            },
-            {
-                "indexed": false,
-                "internalType": "bytes",
                 "name": "content",
-                "type": "bytes"
+                "type": "string"
             }
         ],
         "name": "Minted",
@@ -393,12 +381,38 @@
         "name": "contentOf",
         "outputs": [
             {
-                "internalType": "bytes",
+                "internalType": "string",
                 "name": "",
-                "type": "bytes"
+                "type": "string"
             }
         ],
         "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            }
+        ],
+        "name": "disableBuy",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            }
+        ],
+        "name": "enableBuy",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
@@ -445,6 +459,25 @@
         "type": "function"
     },
     {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "isBuyable",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [],
         "name": "market",
         "outputs": [
@@ -460,13 +493,8 @@
     {
         "inputs": [
             {
-                "internalType": "bytes",
-                "name": "content",
-                "type": "bytes"
-            },
-            {
                 "internalType": "string",
-                "name": "uri",
+                "name": "content",
                 "type": "string"
             }
         ],
@@ -511,45 +539,16 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "to",
+                "name": "seller",
                 "type": "address"
             },
             {
                 "internalType": "string",
-                "name": "uri",
+                "name": "content",
                 "type": "string"
             }
         ],
         "name": "mintTo",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "tokenId",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "internalType": "string",
-                "name": "uri",
-                "type": "string"
-            },
-            {
-                "internalType": "bytes",
-                "name": "content",
-                "type": "bytes"
-            }
-        ],
-        "name": "mintToWithContent",
         "outputs": [
             {
                 "internalType": "uint256",
@@ -815,25 +814,6 @@
                 "internalType": "string",
                 "name": "",
                 "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "textHashOf",
-        "outputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
             }
         ],
         "stateMutability": "view",
