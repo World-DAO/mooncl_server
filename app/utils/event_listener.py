@@ -153,10 +153,7 @@ class EventListener:
                 )
 
                 # 使用AI智能评估价格
-                base_price = await calculate_price(
-                    content=content_text,
-                    use_eigen=False,
-                )
+                base_price = await calculate_price(content=content_text)
                 print(f"evaluate success！Base_price: {base_price}")
 
                 # 创建NFT记录
