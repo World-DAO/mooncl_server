@@ -206,7 +206,6 @@ class PolkadotListener:
         try:
             token_id = event["args"]["tokenId"]
             buyer = event["args"]["buyer"]
-            seller = event["args"]["seller"]
             price = event["args"]["price"]
 
             # 获取数据库会话
@@ -219,7 +218,7 @@ class PolkadotListener:
                 if success:
                     logger.info(
                         f"✅ Successfully processed Bought event for token {token_id}: "
-                        f"{seller} -> {buyer}, price: {self.w3.from_wei(price, 'ether')} ETH"
+                        f"-> {buyer}, price: {self.w3.from_wei(price, 'ether')} ETH"
                     )
                 else:
                     logger.warning(f"Failed to update NFT owner for token {token_id}")
