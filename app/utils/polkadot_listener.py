@@ -206,7 +206,6 @@ class PolkadotListener:
         try:
             token_id = event["args"]["tokenId"]
             buyer = event["args"]["buyer"]
-            price = event["args"]["price"]
 
             # 获取数据库会话
             db = next(get_db())
@@ -216,10 +215,24 @@ class PolkadotListener:
                 success = NFTPolkadotDAO.update_owner(db, token_id, buyer)
 
                 if success:
-                    logger.info(
-                        f"✅ Successfully processed Bought event for token {token_id}: "
-                        f"-> {buyer}, price: {self.w3.from_wei(price, 'ether')} ETH"
-                    )
+                    nft = NFTPolkadotDAO.get_by_token_id(db, token_id)
+                    if nft:
+                        current_price = nft.current_price
+                        new_price = current_price * 1.15
+                        NFTPolkadotDAO.update_current_price(db, token_id, new_price)
+                        price_wei = int(self.w3.to_wei(new_price, "ether"))
+                        price_result = polkadot_client.set_nft_price(token_id, price_wei)
+                        if price_result["success"]:
+                            logger.info(
+                                f"✅ Successfully processed Bought event for token {token_id}: "
+                                f"-> {buyer}, price updated from {current_price} to {new_price} (+15%)"
+                            )
+                        else:
+                            logger.error(
+                                f"Failed to set price for token {token_id}: {price_result['error']}"
+                            )
+                    else:
+                        logger.warning(f"NFT with token_id {token_id} not found in database")
                 else:
                     logger.warning(f"Failed to update NFT owner for token {token_id}")
 

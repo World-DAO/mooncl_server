@@ -9,7 +9,7 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-PRICING_API_URL = "https://api.example.com/v1/nft/evaluate"
+PRICING_API_URL = "http://43.134.74.254:23587/chat"
 
 
 async def call_pricing_api(content: str) -> Optional[float]:
@@ -38,10 +38,18 @@ async def call_pricing_api(content: str) -> Optional[float]:
             ) as response:
                 if response.status == 200:
                     result = await response.json()
-                    price = result.get("price", 0.01)
-
-                    # 确保价格在合理范围内
-                    logger.info(f"估价成功: {price}")
+                    # 获取score_total并转换为价格
+                    score_total = result.get("score_total", 0)
+                    print(f"score_total: {score_total}")
+                    
+                    # 将0-100的分数转换为0-0.01的价格
+                    # score_total / 100 * 0.01 = score_total / 10000
+                    price = score_total / 10000
+                    
+                    # 确保价格在合理范围内 (0-0.01)
+                    price = max(0, min(price, 0.01))
+                    
+                    logger.info(f"估价成功: score_total={score_total}, price={price}")
                     return price
                 else:
                     logger.error(f"估价失败，状态码: {response.status}")
