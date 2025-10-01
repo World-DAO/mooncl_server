@@ -22,206 +22,233 @@ class EigenVerifiableAIEvaluator:
 
     def __init__(self):
         self.client = None
-        self.operators = [
-            {"address": "0x1234...op1", "stake": 100.0, "reputation": 0.95},
-            {"address": "0x5678...op2", "stake": 150.0, "reputation": 0.92},
-            {"address": "0x9abc...op3", "stake": 200.0, "reputation": 0.98},
-        ]
-        self._initialize_client()
+        self.operators = []
+        self.eigencloud_client = None
+        self.settings = None
+        self._initialized = False
+
+    def _initialize(self):
+        """延迟初始化，避免循环导入"""
+        if self._initialized:
+            return
+
+        try:
+            from app.config import settings
+            from app.utils.eigencloud_client import eigencloud_client
+
+            self.settings = settings
+            self.operators = settings.OPERATORS_LIST
+            self.eigencloud_client = eigencloud_client
+            self._initialize_client()
+            self._initialized = True
+            logger.info("EigenVerifiableAIEvaluator初始化完成")
+        except Exception as e:
+            logger.error(f"EigenVerifiableAIEvaluator初始化失败: {e}")
+            self._initialized = True
 
     def _initialize_client(self):
-        """初始化客户端"""
+        """初始化OpenAI客户端"""
         if not OPENAI_AVAILABLE:
             return
 
         try:
-            if settings.OPENAI_API_KEY:
-                self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
-                logger.info("EigenLayer AI评估器初始化成功")
+            if self.settings and self.settings.OPENAI_API_KEY:
+                self.client = OpenAI(api_key=self.settings.OPENAI_API_KEY)
+                logger.info("OpenAI客户端初始化成功")
             else:
                 logger.info("AI评估未启用或缺少API Key，使用传统算法")
         except Exception as e:
-            logger.error(f"EigenLayer AI评估器初始化失败: {e}")
+            logger.error(f"OpenAI客户端初始化失败: {e}")
 
     async def _single_operator_evaluate(
         self, content: str, operator: Dict
     ) -> Optional[Dict[str, Any]]:
         """单个操作员执行AI评估"""
+        self._initialize()
+
         if not self.client:
-            return None
+            return
 
         try:
-            prompt = f"""
-            作为EigenLayer操作员，分析以下NFT内容的价值：
-
-            内容: "{content}"
-
-            从以下维度评估（1-10分）：
-            1. 创意性: 原创性和创新程度
-            2. 艺术价值: 文学或艺术表现力  
-            3. 稀有性: 独特性和稀缺性
-            4. 情感共鸣: 能否引起情感共鸣
-            5. 市场潜力: NFT市场潜在价值
-
-            返回JSON格式：
-            {{
-                "creativity_score": 分数,
-                "artistic_value": 分数,
-                "rarity_score": 分数,
-                "emotional_impact": 分数,
-                "market_potential": 分数,
-                "overall_score": 总分,
-                "suggested_price_eth": 建议价格(0.001-1.0 ETH),
-                "reasoning": "评估理由"
-            }}
-            """
-
-            response = await asyncio.to_thread(
-                self.client.chat.completions.create,
-                model="gpt-3.5-turbo",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": f"你是EigenLayer网络中的操作员 {operator['address']}，负责提供可验证的NFT评估。",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                max_tokens=400,
-                temperature=0.7,
-            )
-
-            content_response = response.choices[0].message.content
-            start_idx = content_response.find("{")
-            end_idx = content_response.rfind("}") + 1
-
-            if start_idx != -1 and end_idx != 0:
-                json_str = content_response[start_idx:end_idx]
-                evaluation = json.loads(json_str)
-
-                # 验证和标准化数据
-                price = float(evaluation.get("suggested_price_eth", 0.01))
-                evaluation["suggested_price_eth"] = max(0.001, min(price, 1.0))
-
-                # 添加操作员信息和签名
-                evaluation["operator"] = {
-                    "address": operator["address"],
-                    "stake": operator["stake"],
-                    "reputation": operator["reputation"],
-                }
-
-                # 创建简化的操作员签名
-                evaluation["signature"] = self._create_operator_signature(
-                    operator["address"], content, evaluation["suggested_price_eth"]
+            if self.eigencloud_client and self.settings.DEVKIT_ENABLED:
+                task_result = await self.eigencloud_client.submit_and_wait_for_result(
+                    content, "ai_evaluation"
                 )
 
-                evaluation["evaluated_at"] = datetime.now().isoformat()
-                return evaluation
+                if task_result and task_result.get("status") == "completed":
+                    evaluation_data = task_result.get("result", {})
+                    price = evaluation_data.get("price", 0.0)
+
+                    return {
+                        "operator_address": operator["address"],
+                        "price": price,
+                        "confidence": evaluation_data.get("confidence", 0.8),
+                        "reasoning": evaluation_data.get(
+                            "reasoning", "EigenCloud验证评估"
+                        ),
+                        "timestamp": datetime.now().isoformat(),
+                        "signature": self._create_operator_signature(
+                            operator["address"], content, price
+                        ),
+                        "task_id": task_result.get("task_id"),
+                        "verification_proof": task_result.get("proof"),
+                    }
+
+            return
 
         except Exception as e:
-            logger.error(f"操作员 {operator['address']} 评估失败: {e}")
-            return None
+            return
+
+    def _extract_price_from_response(self, response: str) -> float:
+        """从AI响应中提取价格"""
+        import re
+
+        # 查找数字模式
+        price_patterns = [
+            r"(\d+\.?\d*)\s*ETH",
+            r"(\d+\.?\d*)\s*eth",
+            r"价格.*?(\d+\.?\d*)",
+            r"估价.*?(\d+\.?\d*)",
+            r"(\d+\.?\d*)",
+        ]
+
+        for pattern in price_patterns:
+            matches = re.findall(pattern, response)
+            if matches:
+                try:
+                    price = float(matches[0])
+                    return min(max(price, 0.001), 10.0)
+                except ValueError:
+                    continue
+
+        return 0.01
 
     def _create_operator_signature(
         self, operator_address: str, content: str, price: float
     ) -> str:
         """创建操作员签名"""
-        data = (
-            f"{operator_address}{content}{price}{datetime.now().strftime('%Y-%m-%d')}"
-        )
-        return hashlib.sha256(data.encode()).hexdigest()[:16]
+        data = f"{operator_address}:{content}:{price}:{datetime.now().date()}"
+        return hashlib.sha256(data.encode()).hexdigest()
 
     async def evaluate_content_with_consensus(
         self, content: str
     ) -> Optional[Dict[str, Any]]:
-        """通过EigenLayer操作员共识评估内容"""
-        if not self.client:
+        """使用共识机制评估内容"""
+        self._initialize()
+
+        if not self.operators:
+            logger.error("没有可用的操作员")
             return None
 
-        try:
-            # 并行执行多个操作员的评估
-            evaluation_tasks = [
-                self._single_operator_evaluate(content, operator)
-                for operator in self.operators
-            ]
+        logger.info(f"开始EigenLayer可验证评估，操作员数量: {len(self.operators)}")
 
-            results = await asyncio.gather(*evaluation_tasks, return_exceptions=True)
+        # 检查EigenCloud健康状态
+        if (
+            self.settings
+            and self.settings.DEVKIT_ENABLED
+            and self.eigencloud_client
+            and not self.eigencloud_client.health_check()
+        ):
+            logger.warning("EigenCloud服务不可用，使用本地评估")
 
-            # 过滤有效结果
-            valid_results = [
-                r for r in results if isinstance(r, dict) and "suggested_price_eth" in r
-            ]
+        # 并行执行所有操作员的评估
+        tasks = [
+            self._single_operator_evaluate(content, operator)
+            for operator in self.operators
+        ]
 
-            if len(valid_results) < 2:
-                logger.warning("EigenLayer共识失败，操作员评估结果不足")
-                return None
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            # 计算加权共识（基于质押量和声誉）
-            consensus_result = self._calculate_weighted_consensus(valid_results)
+        # 过滤有效结果
+        valid_results = []
+        for result in results:
+            if isinstance(result, dict) and result is not None:
+                valid_results.append(result)
+            elif isinstance(result, Exception):
+                logger.error(f"操作员评估异常: {result}")
 
-            # 添加EigenLayer验证信息
-            consensus_result.update(
-                {
-                    "evaluation_method": "eigen_consensus",
-                    "consensus_participants": len(valid_results),
-                    "total_stake": sum(r["operator"]["stake"] for r in valid_results),
-                    "avg_reputation": sum(
-                        r["operator"]["reputation"] for r in valid_results
-                    )
-                    / len(valid_results),
-                    "eigen_verified": True,
-                    "verification_proof": {
-                        "operator_signatures": [r["signature"] for r in valid_results],
-                        "consensus_algorithm": "stake_weighted_average",
-                        "slashing_conditions": "price_deviation > 50%",
-                    },
-                }
+        consensus_threshold = self.settings.CONSENSUS_THRESHOLD if self.settings else 2
+        if len(valid_results) < consensus_threshold:
+            logger.error(
+                f"有效评估结果不足，需要至少 {consensus_threshold} 个，实际获得 {len(valid_results)} 个"
             )
-
-            logger.info(
-                f"EigenLayer共识评估完成: {consensus_result['suggested_price_eth']} ETH"
-            )
-            return consensus_result
-
-        except Exception as e:
-            logger.error(f"EigenLayer共识评估失败: {e}")
             return None
+
+        # 计算加权共识
+        consensus_result = self._calculate_weighted_consensus(valid_results)
+
+        return {
+            "consensus_price": consensus_result["price"],
+            "confidence": consensus_result["confidence"],
+            "operator_count": len(valid_results),
+            "consensus_threshold": consensus_threshold,
+            "individual_results": valid_results,
+            "consensus_reasoning": consensus_result["reasoning"],
+            "verification_timestamp": datetime.now().isoformat(),
+            "avs_name": "MoonCL-AI-Evaluator",
+            "avs_version": "1.0.0",
+            "eigencloud_enabled": (
+                self.settings.DEVKIT_ENABLED if self.settings else False
+            ),
+        }
 
     def _calculate_weighted_consensus(self, results: list) -> Dict[str, Any]:
-        """计算基于质押量的加权共识"""
-        total_stake = sum(r["operator"]["stake"] for r in results)
+        """计算加权共识结果"""
+        if not results:
+            return {"price": 0.0, "confidence": 0.0, "reasoning": "无有效结果"}
 
-        # 加权平均计算各项指标
-        weighted_scores = {}
-        for key in [
-            "creativity_score",
-            "artistic_value",
-            "rarity_score",
-            "emotional_impact",
-            "market_potential",
-            "suggested_price_eth",
-        ]:
-            weighted_sum = sum(r.get(key, 0) * r["operator"]["stake"] for r in results)
-            weighted_scores[key] = weighted_sum / total_stake
+        total_weight = 0
+        weighted_price = 0
+        weighted_confidence = 0
+        reasoning_parts = []
 
-        # 计算总分
-        weighted_scores["overall_score"] = (
-            weighted_scores["creativity_score"]
-            + weighted_scores["artistic_value"]
-            + weighted_scores["rarity_score"]
-            + weighted_scores["emotional_impact"]
-            + weighted_scores["market_potential"]
-        ) / 5
+        for result in results:
+            # 根据操作员声誉计算权重
+            operator_addr = result["operator_address"]
+            operator = next(
+                (op for op in self.operators if op["address"] == operator_addr), None
+            )
 
-        # 合并推理
-        reasoning_parts = [
-            r.get("reasoning", "") for r in results if r.get("reasoning")
-        ]
-        weighted_scores["reasoning"] = (
-            f"EigenLayer共识评估（{len(results)}个操作员）: "
-            + "; ".join(reasoning_parts[:2])
+            if operator:
+                weight = operator.get("stake", 1.0) * operator.get("reputation", 0.8)
+            else:
+                weight = 1.0
+
+            total_weight += weight
+            weighted_price += result["price"] * weight
+            weighted_confidence += result.get("confidence", 0.8) * weight
+
+            reasoning_parts.append(
+                f"操作员 {operator_addr[:10]}...: {result['price']} ETH"
+            )
+
+        if total_weight == 0:
+            return {"price": 0.0, "confidence": 0.0, "reasoning": "权重计算错误"}
+
+        final_price = weighted_price / total_weight
+        final_confidence = weighted_confidence / total_weight
+
+        # 检查价格偏差
+        prices = [r["price"] for r in results]
+        max_price = max(prices)
+        min_price = min(prices)
+
+        max_deviation = self.settings.MAX_PRICE_DEVIATION if self.settings else 0.3
+        if max_price > 0:
+            price_deviation = (max_price - min_price) / max_price
+            if price_deviation > max_deviation:
+                logger.warning(f"价格偏差过大: {price_deviation:.2%}")
+                final_confidence *= 0.8  # 降低置信度
+
+        reasoning = f"基于 {len(results)} 个操作员的加权共识: " + "; ".join(
+            reasoning_parts
         )
 
-        return weighted_scores
+        return {
+            "price": round(final_price, 6),
+            "confidence": round(final_confidence, 3),
+            "reasoning": reasoning,
+        }
 
 
 class AIEvaluator:
